@@ -1,8 +1,0 @@
-D:\записи\5 сем\Инфокомуникационные системы и сети\arduino_iks\arduino_iks\software\WinFormsApp\bin\Debug\WinFormsApp.exe.config
-D:\записи\5 сем\Инфокомуникационные системы и сети\arduino_iks\arduino_iks\software\WinFormsApp\bin\Debug\WinFormsApp.exe
-D:\записи\5 сем\Инфокомуникационные системы и сети\arduino_iks\arduino_iks\software\WinFormsApp\bin\Debug\WinFormsApp.pdb
-D:\записи\5 сем\Инфокомуникационные системы и сети\arduino_iks\arduino_iks\software\WinFormsApp\obj\Debug\WinFormsApp.csprojAssemblyReference.cache
-D:\записи\5 сем\Инфокомуникационные системы и сети\arduino_iks\arduino_iks\software\WinFormsApp\obj\Debug\WinFormsApp.Properties.Resources.resources
-D:\записи\5 сем\Инфокомуникационные системы и сети\arduino_iks\arduino_iks\software\WinFormsApp\obj\Debug\WinFormsApp.csproj.GenerateResource.cache
-D:\записи\5 сем\Инфокомуникационные системы и сети\arduino_iks\arduino_iks\software\WinFormsApp\obj\Debug\WinFormsApp.exe
-D:\записи\5 сем\Инфокомуникационные системы и сети\arduino_iks\arduino_iks\software\WinFormsApp\obj\Debug\WinFormsApp.pdb
