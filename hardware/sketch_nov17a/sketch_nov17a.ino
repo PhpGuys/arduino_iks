@@ -5,12 +5,6 @@ Control control;
 
 byte b[]= {0x02, 0x00, 0x04, 0x00, 0x02, 0x04,0x00, 0x00};
 byte buf[64];
-void printHex(byte num) {
-  char hexCar[2];
-
-  sprintf(hexCar, "%02X", num);
-  Serial.print(hexCar);
-}
 
 
 typedef struct {
@@ -20,9 +14,6 @@ typedef struct {
 }field;
 
 field fields[7];
-
-
-
 
 
 void setup() {
