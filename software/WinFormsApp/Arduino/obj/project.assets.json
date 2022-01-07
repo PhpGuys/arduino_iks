@@ -2978,24 +2978,23 @@
     ]
   },
   "packageFolders": {
-    "C:\\Users\\User\\.nuget\\packages\\": {},
-    "D:\\VS 2019 Com\\NuGetPackages": {}
+    "C:\\Users\\artio\\.nuget\\packages\\": {},
+    "C:\\Program Files\\dotnet\\sdk\\NuGetFallbackFolder": {}
   },
   "project": {
     "version": "1.0.0",
     "restore": {
-      "projectUniqueName": "D:\\записи\\5 сем\\Инфокомуникационные системы и сети\\Arduino_2\\Arduino\\Arduino.csproj",
+      "projectUniqueName": "F:\\arduino_iks\\software\\WinFormsApp\\Arduino\\Arduino.csproj",
       "projectName": "Arduino",
-      "projectPath": "D:\\записи\\5 сем\\Инфокомуникационные системы и сети\\Arduino_2\\Arduino\\Arduino.csproj",
-      "packagesPath": "C:\\Users\\User\\.nuget\\packages\\",
-      "outputPath": "D:\\записи\\5 сем\\Инфокомуникационные системы и сети\\Arduino_2\\Arduino\\obj\\",
+      "projectPath": "F:\\arduino_iks\\software\\WinFormsApp\\Arduino\\Arduino.csproj",
+      "packagesPath": "C:\\Users\\artio\\.nuget\\packages\\",
+      "outputPath": "F:\\arduino_iks\\software\\WinFormsApp\\Arduino\\obj\\",
       "projectStyle": "PackageReference",
       "fallbackFolders": [
-        "D:\\VS 2019 Com\\NuGetPackages"
+        "C:\\Program Files\\dotnet\\sdk\\NuGetFallbackFolder"
       ],
       "configFilePaths": [
-        "C:\\Users\\User\\AppData\\Roaming\\NuGet\\NuGet.Config",
-        "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.FallbackLocation.config",
+        "C:\\Users\\artio\\AppData\\Roaming\\NuGet\\NuGet.Config",
         "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.Offline.config"
       ],
       "originalTargetFrameworks": [
