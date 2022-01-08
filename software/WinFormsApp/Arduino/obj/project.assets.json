@@ -2984,11 +2984,11 @@
   "project": {
     "version": "1.0.0",
     "restore": {
-      "projectUniqueName": "D:\\записи\\5 сем\\Инфокомуникационные системы и сети\\Arduino_2\\Arduino\\Arduino.csproj",
+      "projectUniqueName": "D:\\записи\\5 сем\\Инфокомуникационные системы и сети\\arduino_iks\\arduino_iks\\software\\WinFormsApp\\Arduino\\Arduino.csproj",
       "projectName": "Arduino",
-      "projectPath": "D:\\записи\\5 сем\\Инфокомуникационные системы и сети\\Arduino_2\\Arduino\\Arduino.csproj",
+      "projectPath": "D:\\записи\\5 сем\\Инфокомуникационные системы и сети\\arduino_iks\\arduino_iks\\software\\WinFormsApp\\Arduino\\Arduino.csproj",
       "packagesPath": "C:\\Users\\User\\.nuget\\packages\\",
-      "outputPath": "D:\\записи\\5 сем\\Инфокомуникационные системы и сети\\Arduino_2\\Arduino\\obj\\",
+      "outputPath": "D:\\записи\\5 сем\\Инфокомуникационные системы и сети\\arduino_iks\\arduino_iks\\software\\WinFormsApp\\Arduino\\obj\\",
       "projectStyle": "PackageReference",
       "fallbackFolders": [
         "D:\\VS 2019 Com\\NuGetPackages"

@@ -1,11 +1,8 @@
 #include "file.h"
-int i = 0;  // переменная для счетчика имитирующего показания датчика
 int led = 13;
 Control control;
 
-byte b[]= {0x02, 0x00, 0x04, 0x00, 0x02, 0x04,0x00, 0x00};
 byte buf[64];
-
 
 typedef struct {
   int offset;
@@ -17,9 +14,8 @@ field fields[7];
 
 
 void setup() {
-  String stringOne = "Info from Arduino ";
   Serial.begin(9600);    // установим скорость обмена данными
-  pinMode(led, OUTPUT);  // и режим работы 13-ого цифрового пина в качестве выхода
+  pinMode(led, OUTPUT);
 
   control.id = 1337;
   control.code = 'b';

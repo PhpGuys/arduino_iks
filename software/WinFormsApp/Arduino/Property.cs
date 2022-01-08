@@ -113,12 +113,6 @@ namespace Arduino
             }
             Update();
         }
-        //public void HardwareSet(string x)
-        //{
-        //   // _box.BackColor = SystemColors.Control;
-        //   // SetValue(x);
-        //   // Update();
-        //}
 
         public T Min {get; }
         public T Max {get; }
