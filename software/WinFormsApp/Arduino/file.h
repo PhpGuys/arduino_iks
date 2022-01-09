@@ -4,8 +4,8 @@
 
 struct Control
 {
-//type:Z name:общая информация 
-    unsigned int id;   //type:F name: ID min:0 max:200 def:100 timer: 5 
+//type:Z name:общее 
+    unsigned char id;   //type:V name: ID min:0 max:200 def:100 timer: 5 
     unsigned int id2;   //type:V name: ID2 min:0 max:200 def:100 timer: 15
 //type:Z name:ключевые параметры 
     unsigned int code;//type:S name:смещение min:0 max: 100 def:30 timer: 10

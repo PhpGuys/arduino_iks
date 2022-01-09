@@ -12,7 +12,7 @@ namespace Arduino
         Parser parser;
         private void Setup()
         {
-            device = new(new SerialPort("COM3", 9600), this);
+            device = new(new SerialPort("COM1", 9600), this);
             parser = new Parser(device);
 
             parser.Parse(@"file.h");
@@ -46,11 +46,11 @@ namespace Arduino
         {
             if (richTextBox1.InvokeRequired)
             {
-                richTextBox1.Invoke(new Action(() => richTextBox1.AppendText(Environment.NewLine + message)));
+                richTextBox1.Invoke(new Action(() => richTextBox1.AppendText( message)));
             }
             else
             {
-                richTextBox1.AppendText(Environment.NewLine + message);
+                richTextBox1.AppendText( message);
                 richTextBox1.ScrollToCaret();
             }
         }

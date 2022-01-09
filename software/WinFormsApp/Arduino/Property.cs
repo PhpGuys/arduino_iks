@@ -113,6 +113,12 @@ namespace Arduino
             }
             Update();
         }
+        //public void HardwareSet(string x)
+        //{
+        //   // _box.BackColor = SystemColors.Control;
+        //   // SetValue(x);
+        //   // Update();
+        //}
 
         public T Min {get; }
         public T Max {get; }
@@ -142,8 +148,8 @@ namespace Arduino
         {
             switch (Type.GetTypeCode(ob.GetType()))
             {
-                case TypeCode.Byte: { return BitConverter.GetBytes((byte)ob); }
-                case TypeCode.SByte: { return BitConverter.GetBytes((sbyte)ob); }
+                case TypeCode.Byte: { return new byte[] { (byte)ob };}
+                case TypeCode.SByte: { return (byte[])(Array)(new sbyte[] { (sbyte)ob }); }
                 case TypeCode.Int16: { return BitConverter.GetBytes((short)ob); }
                 case TypeCode.UInt16: { return BitConverter.GetBytes((ushort)ob); }
                 case TypeCode.Single: { return BitConverter.GetBytes((float)ob); }

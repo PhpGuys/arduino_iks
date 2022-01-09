@@ -1,23 +1,23 @@
 {
   "format": 1,
   "restore": {
-    "D:\\записи\\5 сем\\Инфокомуникационные системы и сети\\arduino_iks\\arduino_iks\\software\\WinFormsApp\\Arduino\\Arduino.csproj": {}
+    "C:\\VS\\KWork\\Arduino\\Arduino\\Arduino.csproj": {}
   },
   "projects": {
-    "D:\\записи\\5 сем\\Инфокомуникационные системы и сети\\arduino_iks\\arduino_iks\\software\\WinFormsApp\\Arduino\\Arduino.csproj": {
+    "C:\\VS\\KWork\\Arduino\\Arduino\\Arduino.csproj": {
       "version": "1.0.0",
       "restore": {
-        "projectUniqueName": "D:\\записи\\5 сем\\Инфокомуникационные системы и сети\\arduino_iks\\arduino_iks\\software\\WinFormsApp\\Arduino\\Arduino.csproj",
+        "projectUniqueName": "C:\\VS\\KWork\\Arduino\\Arduino\\Arduino.csproj",
         "projectName": "Arduino",
-        "projectPath": "D:\\записи\\5 сем\\Инфокомуникационные системы и сети\\arduino_iks\\arduino_iks\\software\\WinFormsApp\\Arduino\\Arduino.csproj",
-        "packagesPath": "C:\\Users\\User\\.nuget\\packages\\",
-        "outputPath": "D:\\записи\\5 сем\\Инфокомуникационные системы и сети\\arduino_iks\\arduino_iks\\software\\WinFormsApp\\Arduino\\obj\\",
+        "projectPath": "C:\\VS\\KWork\\Arduino\\Arduino\\Arduino.csproj",
+        "packagesPath": "C:\\Users\\Tony\\.nuget\\packages\\",
+        "outputPath": "C:\\VS\\KWork\\Arduino\\Arduino\\obj\\",
         "projectStyle": "PackageReference",
         "fallbackFolders": [
-          "D:\\VS 2019 Com\\NuGetPackages"
+          "C:\\Program Files (x86)\\Microsoft Visual Studio\\Shared\\NuGetPackages"
         ],
         "configFilePaths": [
-          "C:\\Users\\User\\AppData\\Roaming\\NuGet\\NuGet.Config",
+          "C:\\Users\\Tony\\AppData\\Roaming\\NuGet\\NuGet.Config",
           "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.FallbackLocation.config",
           "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.Offline.config"
         ],
@@ -71,7 +71,7 @@
               "privateAssets": "none"
             }
           },
-          "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\6.0.101\\RuntimeIdentifierGraph.json"
+          "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\6.0.100\\RuntimeIdentifierGraph.json"
         }
       }
     }
