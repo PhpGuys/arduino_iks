@@ -1,169 +1,193 @@
 #include "file.h"
+
+// Объявление кодов команд и макроса валидации для них
+#define cmdRead 0x01
+#define cmdWrite 0x02
+#define cmdButton 0x03
+#define CommandValid(cmd_) (cmd_ >= cmdRead && cmd_<= cmdButton) 
+
+#define cmdError 0x04
+
+// Коды ошибок чтения данных
+enum ReadResult { ReadOK = 0x00, ReadError, CodeInvalid, OffsetInvalid, LenInvalid, CRCError};
+
+
+int i = 0;  // переменная для счетчика имитирующего показания датчика
 int led = 13;
 Control control;
+byte* ptrControl = (byte *)&control;
 
-byte buf[64];
+byte b[]= {0x02, 0x00, 0x04, 0x00, 0x02, 0x04,0x00, 0x00};
 
-typedef struct {
-  int offset;
-  int len;
-  byte* addr;
-}field;
+void printHex(byte num) {
+  char hexCar[2];
 
-field fields[7];
+  sprintf(hexCar, "%02X", num);
+  Serial.print(hexCar);
+}
 
 
 void setup() {
+  String stringOne = "Info from Arduino ";
   Serial.begin(9600);    // установим скорость обмена данными
-  pinMode(led, OUTPUT);
+  pinMode(led, OUTPUT);  // и режим работы 13-ого цифрового пина в качестве выхода
 
   control.id = 1337;
   control.code = 'b';
   control.letter = 'a';
   control.digit = 255;
   control.identifier = 9.999;
-
-fields[0]= {0, sizeof(control.id), (byte*)&control.id};
-fields[1]= {2, sizeof(control.id2), (byte*)&control.id2};
-fields[2]= {4, sizeof(control.code), (byte*)&control.code};
-fields[3]= {6, sizeof(control.letter), (byte*)&control.letter};
-fields[4]= {7, sizeof(control.digit), (byte*)&control.digit};
-fields[5]= {9, sizeof(control.identifier), (byte*)&control.identifier};
-fields[6]= {13, sizeof(control.digit2), (byte*)&control.digit2};
-
- 
 }
 
-void SendField(int index)
+
+// Обработчик нажатия на кнопку
+void OnButton(int len, byte* buf)
 {
-  byte data = 0x02;
-  byte crc = data;
-  Serial.write(data);
+  
+}
 
-  Serial.write(0);
-  data = fields[index].offset;
-  crc ^= data;
-  Serial.write(data);
+void SendError(ReadResult err)
+{
+  byte crc=0;
+  byte code = cmdError;
+  byte data = err;
+  
+  WriteValue(&code,sizeof(code),&crc);
+  WriteValue(&data,sizeof(data),&crc);
+  Serial.write(crc);  
+}
 
-  Serial.write(0);
-  data = fields[index].len;
-  crc ^= data;
-  Serial.write(data);
 
-  for(int i=0; i<fields[index].len; i++)
+// Функция чтения элемента заданной длины из входного потока Serial с подсчетом контрольной суммы
+bool ReadValue(byte* value, int len, byte* crc)
+{
+  if (Serial.readBytes(value, len) == len)
   {
-    data = fields[index].addr[i];
-    crc ^= data;
-    Serial.write(data);
+    for (int i = 0; i < len; i++)
+    {
+      *crc ^= value[i];
+    }
+    return true;
   }
+  return false;
+}
+
+
+// Функция записи элемента заданной длины в выходной поток Serial с подсчетом контрольной суммы
+void WriteValue(byte* value, int len, byte* crc)
+{
+  for (int i = 0; i < len; i++)
+  {
+    Serial.write(value[i]);
+    *crc ^= value[i];
+  }
+}
+
+void SendData(int offset, int len)
+{
+  byte crc=0;
+  byte code = cmdRead;
+  
+  WriteValue(&code,sizeof(code),&crc);
+  WriteValue((byte*)&offset,sizeof(offset),&crc);
+  WriteValue((byte*)&len,sizeof(len),&crc);
+  WriteValue(&ptrControl[offset], len, &crc);
   Serial.write(crc);
 }
-
-int findByOffset(byte offset)
+ 
+ReadResult ReadPacket()
 {
-  for(int i=0;i<7;i++)
+  byte code;
+  byte crc = 0;
+  byte crcReaded;
+  int len;
+  int offset;
+  byte buf[64];
+
+
+  // Чтение команды
+  if (!ReadValue((byte*)&code,sizeof(code),&crc)) return ReadError;
+
+  // Валидация команды
+  if (!CommandValid(code)) return CodeInvalid;
+
+  // Расшифровка, валидация и выполнение команд
+  switch (code)
   {
-    if (fields[i].offset == offset) return i;
+    // Команды чтения из структуры и запись в структуру
+    case cmdRead:
+    case cmdWrite:
+      // Чтение смещения в структуре  
+      if (!ReadValue((byte*)&offset,sizeof(offset),&crc)) return ReadError;
+
+      // Чтeние длины извлекаемых/изменяемых данных
+      if (!ReadValue((byte*)&len,sizeof(len),&crc)) return ReadError;
+
+      // Валидация смещения (смещение + длина не должны выходить за пределы структуры)  
+      if (offset + len >= sizeof(Control)) return OffsetInvalid;
+
+      // Только при записи
+      if (code == cmdWrite)
+      {
+        // Валидация длины изменяемых данных (допустимые значения длин данных - 1,2,4 байта)
+        if (len != 1 && len != 2 && len != 4) return LenInvalid;
+
+        // Чтение изменяемых данных в буфер
+        if (!ReadValue(buf,len,&crc)) return ReadError;
+      }
+
+      // Чтeние crc
+      if (!ReadValue((byte*)&crcReaded,sizeof(crcReaded),&crc)) return ReadError;
+      
+      // Валидация crc 
+      if (crc != 0) return CRCError;
+
+      // Только при записи
+      if (code == cmdWrite)
+      {
+        memcpy(&ptrControl[offset], buf, len); 
+      }      
+
+      // Возврат прочитанных/измененных данных
+      SendData(offset, len);
+
+    // Нажатие кнопки    
+    case cmdButton:
+      
+      // Чтeние длины команды
+      if (!ReadValue((byte*)&len,sizeof(len),&crc)) return ReadError;
+      
+      // Валидация длины (не более 64 байт) 
+      if (len > 64) return LenInvalid;
+      
+      // Чтение команды в буфер
+      if (!ReadValue(buf,len,&crc)) return ReadError;
+
+      // Чтeние crc
+      if (!ReadValue(&crcReaded,sizeof(crc),&crc)) return ReadError;
+      
+      // Валидация crc 
+      if (crc != 0) return CRCError;
+
+      // Выполнение команды по кнопке
+      OnButton(len, buf);      
+      
+      break;
   }
-  return 0;
-}
-
-void OnButton()
-{
-  while (Serial.available() < 2){} 
-  Serial.read();
-  byte len = Serial.read();
-  while (Serial.available() < len+1){}
-  for (int i=0; i< len; i++)
-  {
-    Serial.read();
-  }  
-  Serial.read();
-}
-
-
-void LoadField()
-{
-  byte offset;
-  byte len;
-  byte data = 0x02;
-  byte crc = data;
-  while (Serial.available() < 4){}
-  
-  Serial.read();
-  offset = Serial.read();
-  crc ^= offset;
-  
-  Serial.read();
-  len = Serial.read();
-  crc ^= len;
-  
-  while (Serial.available() < len+1){}
-  for (int i=0; i< len; i++)
-  {
-    buf[i] = Serial.read();
-    crc ^= buf[i];
-  }
-
-  if (crc == Serial.read())
-  {
-    byte* ptr = fields[findByOffset(offset)].addr; 
-    for (int i=0; i< len; i++)
-    {
-      ptr[i] = buf[i];
-    }    
-  }
+  return ReadOK;
 }
 
 
 void loop() {
 
-byte code;
-byte crc;
-byte offset;
-
- if (Serial.available() > 0) {  //Данные пришли
-        // считываем код
-        code = Serial.read();
-
-         /// Запрос всех полей 
-        if (code == 0x01)
-        {
-            while (Serial.available() <= 0){}
-            crc = Serial.read();
-            if (crc == 0x01)
-            {
-               for (int i = 0; i < 7; i ++)
-               {
-                   SendField(i); 
-               }
-            }
-        }
-         /// Изменение одного поля 
-        if (code == 0x02)
-        {
-            LoadField();
-        }
-         /// Обновление поля 
-        if (code == 0x03)
-        {
-          crc = 0x03;
-          while (Serial.available() < 3){}
-          Serial.read();
-          offset = Serial.read();
-          crc ^= offset;
-          if (crc == Serial.read())
-          {
-            SendField(findByOffset(offset));
-          }
-        }
-         /// Кнопка 
-        if (code == 0x04)
-        {
-            OnButton();
-        }
-
-        
-     }
-     digitalWrite(led, HIGH);
+  ReadResult res;
+  if(Serial.available())
+  {
+    res = ReadPacket();
+    if (res != ReadOK)
+    {
+      SendError(res);
+    }
+  }
+  digitalWrite(led, HIGH);
 }
