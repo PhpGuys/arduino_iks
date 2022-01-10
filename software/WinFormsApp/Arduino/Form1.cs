@@ -12,7 +12,7 @@ namespace Arduino
         Parser parser;
         private void Setup()
         {
-            device = new(new SerialPort("COM1", 9600), this);
+            device = new(new SerialPort("COM3", 9600), this);
             parser = new Parser(device);
 
             parser.Parse(@"file.h");
