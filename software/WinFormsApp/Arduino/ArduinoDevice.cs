@@ -9,6 +9,7 @@ namespace Arduino
 
         ILogger logger;
 
+        public int PropsLen => properties.Sum(x => x.Value.RawValue.Length);
 
         private Queue<HardwareMessage> RecievedMessages = new();
 
@@ -34,6 +35,26 @@ namespace Arduino
             Port.Close();
         }
 
+
+        void ProcessMessage(HardwareMessage msg)
+        {
+            int position = 0;
+
+            try
+            {
+                while (position < msg.Value.Length)
+                {
+                    int step = properties[msg.Offset + position].RawValue.Length;
+                    properties[msg.Offset + position].RawValue = msg.Value.Skip(position).Take(step).ToArray();
+                    position += step;
+                }
+            }
+            catch (Exception)
+            {
+                logger.Log(Environment.NewLine + "[Ошибка расшифровки данных]  {смещение: " + (msg.Offset+position).ToString() + "}");
+            }
+
+        }
         public void Update()
         {
             if (RecievedMessages.Count <= 0) return;
@@ -43,7 +64,8 @@ namespace Arduino
                 while (RecievedMessages.Count > 0)
                 {
                     HardwareMessage msg = RecievedMessages.Dequeue();
-                    properties[msg.Offset].RawValue = msg.Value;
+                    ProcessMessage(msg);
+                    //properties[msg.Offset].RawValue = msg.Value;
                 }
             }
         }
@@ -59,8 +81,16 @@ namespace Arduino
 
         public void RequestAllValues()
         {
+            int len = PropsLen;
             List<byte> msg = new();
             msg.Add(0x01);
+            // Смещение
+            msg.Add(0x00);
+            msg.Add(0x00);
+            // Длина
+            msg.Add((byte)(len & 0xFF));
+            msg.Add((byte)(len >> 8));
+
             msg.Add(GetCRC(msg));
             Port.Write(msg.ToArray(), 0, msg.Count);
             logger.Log(">>>> Запрос всех полей {" + BitConverter.ToString(msg.ToArray()) + "}");
@@ -70,13 +100,19 @@ namespace Arduino
 
         public void RequestValue(IProperty p)
         {
+            int len = p.RawValue.Length;
             List<byte> msg = new();
-            msg.Add(0x03);
-            msg.Add((byte)(p.Offset >> 8));
+            msg.Add(0x01);
+            // Смещение
             msg.Add((byte)(p.Offset & 0xFF));
+            msg.Add((byte)(p.Offset >> 8));
+            // Длина
+            msg.Add((byte)(len & 0xFF));
+            msg.Add((byte)(len >> 8));
+
             msg.Add(GetCRC(msg));
             Port.Write(msg.ToArray(), 0, msg.Count);
-            logger.Log(">>>> Запрос на обновление {" + BitConverter.ToString(msg.ToArray()) + "}");
+            logger.Log(Environment.NewLine + ">>>> Запрос на обновление {" + BitConverter.ToString(msg.ToArray()) + "}");
         }
 
         public void SendValue(IProperty p)
@@ -86,14 +122,16 @@ namespace Arduino
             ushort len = (ushort)data.Length;
             List<byte> msg = new();
             msg.Add(0x02);
-            msg.Add((byte)(p.Offset >> 8));
             msg.Add((byte)(p.Offset & 0xFF));
-            msg.Add((byte)(len >> 8));
+            msg.Add((byte)(p.Offset >> 8));
+
             msg.Add((byte)(len & 0xFF));
+            msg.Add((byte)(len >> 8));
+
             msg.AddRange(data);
             msg.Add(GetCRC(msg));
             Port.Write(msg.ToArray(), 0, msg.Count);
-            logger.Log(">>>> Изменение поля {" + BitConverter.ToString(msg.ToArray()) + "}");
+            logger.Log(Environment.NewLine + ">>>> Изменение поля {" + BitConverter.ToString(msg.ToArray()) + "}");
         }
 
         byte GetCRC(List<byte>msg)
@@ -111,11 +149,13 @@ namespace Arduino
         public ushort ReadUshort(ref byte crc)
         {
             byte b = (byte)Port.ReadByte();
+            logger.Log(".."+b.ToString());
             crc ^= b;
-            ushort result = (ushort)(b << 8);
+            ushort result = (ushort)b;
             b = (byte)Port.ReadByte();
+            logger.Log(".." + b.ToString());
             crc ^= b;
-            result += b;
+            result += (ushort)(b<<8);
             return result;
         }
 
@@ -125,27 +165,44 @@ namespace Arduino
         private void Read()
         {
             ushort offset, len;
-            byte crc;
+            byte crc; 
+            int code;
+            byte errCode;
             while (true)
             {
                 try
                 {
-                    if (Port.ReadByte() == 0x02) // STX
+                    code = Port.ReadByte();
+                    if (code >= 0)
                     {
-                        crc = 0x02;
-                        offset = ReadUshort(ref crc);
-                        len = ReadUshort(ref crc);
-
-                        byte[] data = new byte[len];
-                        Port.Read(data, 0, len);
-
-                        foreach (byte b in data) crc ^= b;
-                        logger.Log("<<<< Получено значение поля {" + BitConverter.ToString(data) + "}");
-                        if (crc == Port.ReadByte())
+                        crc = (byte)code;
+                        if (code == 0x01) // Возврат данных
                         {
-                            lock (RecievedMessages)
+                            offset = ReadUshort(ref crc);
+                            len = ReadUshort(ref crc);
+                            byte[] data = new byte[len];
+                            Port.Read(data, 0, len);
+                            foreach (byte b in data)
                             {
-                                RecievedMessages.Enqueue(new HardwareMessage() { Offset = offset, Value = data });
+                                logger.Log("-" + b.ToString());
+                                crc ^= b;
+                            }
+                            logger.Log(Environment.NewLine + "<<<< Получено значение данных {" + BitConverter.ToString(data) + "}");
+                            if (crc == Port.ReadByte())
+                            {
+                                lock (RecievedMessages)
+                                {
+                                    RecievedMessages.Enqueue(new HardwareMessage() { Offset = offset, Value = data });
+                                }
+                            }
+                        }
+                        if (code == 0x04)
+                        {
+                            errCode = (byte)Port.ReadByte();
+                            crc ^= errCode;
+                            if (crc == Port.ReadByte())
+                            {
+                                logger.Log(Environment.NewLine + "<<<< Ошибка {" + errCode.ToString() + "}");
                             }
                         }
                     }
@@ -168,13 +225,13 @@ namespace Arduino
 
             ushort len = (ushort)data.Length;
             List<byte> msg = new();
-            msg.Add(0x04);
-            msg.Add((byte)(len >> 8));
+            msg.Add(0x03);
             msg.Add((byte)(len & 0xFF));
+            msg.Add((byte)(len >> 8));
             msg.AddRange(data);
             msg.Add(GetCRC(msg));
             Port.Write(msg.ToArray(), 0, msg.Count);
-            logger.Log(">>>> Команда от кнопки {" + BitConverter.ToString(msg.ToArray()) + "}");
+            logger.Log(Environment.NewLine + ">>>> Команда от кнопки {" + BitConverter.ToString(msg.ToArray()) + "}");
         }
     }
 }

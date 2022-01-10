@@ -1,8 +1,8 @@
 {
   "version": 2,
-  "dgSpecHash": "mIAmSPVZgvaPMwKdvy590P7eHV/GLjpLXTGtLGoy2zDc06lEsgnFEifVQUrr3xqCxpbdbEIwV6MyGTbLrTXK3Q==",
+  "dgSpecHash": "bYkx4AbP2sy97Apa20mHOPWmFZf7FEm0S9ehD1PT8PCauDN1YWWQdI3fEQGuPDNZKcUC4S5yu4IlJBtXCk5NCg==",
   "success": true,
-  "projectFilePath": "D:\\записи\\5 сем\\Инфокомуникационные системы и сети\\arduino_iks\\arduino_iks\\software\\WinFormsApp\\Arduino\\Arduino.csproj",
+  "projectFilePath": "C:\\Users\\User\\Downloads\\Arduino\\Arduino\\Arduino.csproj",
   "expectedPackageFiles": [
     "C:\\Users\\User\\.nuget\\packages\\microsoft.codeanalysis.analyzers\\3.3.2\\microsoft.codeanalysis.analyzers.3.3.2.nupkg.sha512",
     "C:\\Users\\User\\.nuget\\packages\\microsoft.codeanalysis.common\\4.0.1\\microsoft.codeanalysis.common.4.0.1.nupkg.sha512",

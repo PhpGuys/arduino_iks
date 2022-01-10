@@ -14,12 +14,12 @@
                 if (e.KeyChar == (char)Keys.Return)
                 {
                     e.Handled = true;
-                    UserSet(textBox.Text);
+                    UserSet(textBox.Text.Replace(',', '.'));
                 }
             };
             textBox.TextChanged += (s, e) => { focusTimer.Stop(); focusTimer.Start(); };
 
-            textBox.Leave += (s, e) => { focusTimer.Stop(); updateTimer.Start(); UserSet(textBox.Text); };
+            textBox.Leave += (s, e) => { focusTimer.Stop(); updateTimer.Start(); UserSet(textBox.Text.Replace(',', '.')); };
 
             textBox.Enter += (s, e) => { focusTimer.Start(); updateTimer.Stop(); };
             

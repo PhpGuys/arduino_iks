@@ -27,7 +27,9 @@
             trackBar.MouseWheel += (s, e) => { ((HandledMouseEventArgs)e).Handled = true; };
 
             trackBar.MouseDown += (s, e) => clicked = true;
-          
+            trackBar.KeyDown += (s, e) => { ((KeyEventArgs)e).Handled = true; };
+
+
             trackBar.MouseUp += (s, e) =>
             {
                 if (!clicked)   return;

@@ -129,7 +129,12 @@ namespace Arduino
                         prop = (IProperty)Activator.CreateInstance(genericType, _device,param);
 
                         _device.RegisterProperty(prop);
+                        //byte[] b = prop.RawValue;
+                        //b[0]++;
+                        //prop.RawValue = b;
+                        //prop.RawValue = new byte[2] {1,2 };
 
+                        //Properties.Add(prop);
                         Controls.Add(prop.Box);
                         continue;
                     }

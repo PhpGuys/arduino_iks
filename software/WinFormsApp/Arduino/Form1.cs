@@ -46,11 +46,11 @@ namespace Arduino
         {
             if (richTextBox1.InvokeRequired)
             {
-                richTextBox1.Invoke(new Action(() => richTextBox1.AppendText(Environment.NewLine + message)));
+                richTextBox1.Invoke(new Action(() => richTextBox1.AppendText( message)));
             }
             else
             {
-                richTextBox1.AppendText(Environment.NewLine + message);
+                richTextBox1.AppendText( message);
                 richTextBox1.ScrollToCaret();
             }
         }
