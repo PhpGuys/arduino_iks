@@ -6,7 +6,6 @@ namespace Arduino
     public interface IProperty
     {
         public Panel Box { get; }
-       // public void HardwareSet(string x);
         public event EventHandler? PropertyChanged;
         public event EventHandler? PropertyRequest;
         public byte[] RawValue { set; get; }
@@ -18,8 +17,6 @@ namespace Arduino
         where T : struct, IComparable, IEquatable<T>
     {
         private T _value;
-
-       // private IHardware _device;
 
         protected readonly Timer updateTimer = new();
 
@@ -53,7 +50,7 @@ namespace Arduino
         }
         public Property(IHardware hardware, hardParam param)
         {
-           // _device = hardware;
+
             Offset = param.offset;
             Min = (T)Convert.ChangeType(param.min, typeof(T), CultureInfo.InvariantCulture);
             Max = (T)Convert.ChangeType(param.max, typeof(T), CultureInfo.InvariantCulture);
@@ -113,12 +110,6 @@ namespace Arduino
             }
             Update();
         }
-        //public void HardwareSet(string x)
-        //{
-        //   // _box.BackColor = SystemColors.Control;
-        //   // SetValue(x);
-        //   // Update();
-        //}
 
         public T Min {get; }
         public T Max {get; }
@@ -130,9 +121,9 @@ namespace Arduino
         {
             switch (Type.GetTypeCode(typeof(T)))
             {
-                case TypeCode.Byte: { return (T)Convert.ChangeType(data[0], typeof(T)); }// (byte) BitConverter.ToGetBytes((byte)ob); }
-                case TypeCode.SByte: { return (T)Convert.ChangeType(data[0], typeof(T)); }// (byte) BitConverter.ToGetBytes((byte)ob); }
-                case TypeCode.Int16: { return (T)Convert.ChangeType(BitConverter.ToUInt16(data), typeof(T)); }// return BitConverter.GetBytes((sbyte)ob); }
+                case TypeCode.Byte: { return (T)Convert.ChangeType(data[0], typeof(T)); }
+                case TypeCode.SByte: { return (T)Convert.ChangeType(data[0], typeof(T)); }
+                case TypeCode.Int16: { return (T)Convert.ChangeType(BitConverter.ToUInt16(data), typeof(T)); }
                 case TypeCode.UInt16: { return (T)Convert.ChangeType(BitConverter.ToUInt16(data), typeof(T)); }
                 case TypeCode.Single: { return (T)Convert.ChangeType(BitConverter.ToSingle(data), typeof(T)); }
                 default: { return (T)Activator.CreateInstance(typeof(T)); }
