@@ -1,24 +1,23 @@
 {
   "format": 1,
   "restore": {
-    "C:\\Users\\User\\Downloads\\Arduino\\Arduino\\Arduino.csproj": {}
+    "F:\\001\\software\\WinFormsApp\\Arduino\\Arduino.csproj": {}
   },
   "projects": {
-    "C:\\Users\\User\\Downloads\\Arduino\\Arduino\\Arduino.csproj": {
+    "F:\\001\\software\\WinFormsApp\\Arduino\\Arduino.csproj": {
       "version": "1.0.0",
       "restore": {
-        "projectUniqueName": "C:\\Users\\User\\Downloads\\Arduino\\Arduino\\Arduino.csproj",
+        "projectUniqueName": "F:\\001\\software\\WinFormsApp\\Arduino\\Arduino.csproj",
         "projectName": "Arduino",
-        "projectPath": "C:\\Users\\User\\Downloads\\Arduino\\Arduino\\Arduino.csproj",
-        "packagesPath": "C:\\Users\\User\\.nuget\\packages\\",
-        "outputPath": "C:\\Users\\User\\Downloads\\Arduino\\Arduino\\obj\\",
+        "projectPath": "F:\\001\\software\\WinFormsApp\\Arduino\\Arduino.csproj",
+        "packagesPath": "C:\\Users\\artio\\.nuget\\packages\\",
+        "outputPath": "F:\\001\\software\\WinFormsApp\\Arduino\\obj\\",
         "projectStyle": "PackageReference",
         "fallbackFolders": [
-          "D:\\VS 2019 Com\\NuGetPackages"
+          "C:\\Program Files\\dotnet\\sdk\\NuGetFallbackFolder"
         ],
         "configFilePaths": [
-          "C:\\Users\\User\\AppData\\Roaming\\NuGet\\NuGet.Config",
-          "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.FallbackLocation.config",
+          "C:\\Users\\artio\\AppData\\Roaming\\NuGet\\NuGet.Config",
           "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.Offline.config"
         ],
         "originalTargetFrameworks": [

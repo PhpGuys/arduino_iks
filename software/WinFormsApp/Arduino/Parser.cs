@@ -67,7 +67,7 @@ namespace Arduino
 
             IProperty prop;
 
-            string contents = File.ReadAllText(fileName);
+            string contents = File.ReadAllText(fileName).Replace(',', '.');
 
             string[] tokens = Regex.Split(contents, string.Join("|", keywords)).Select(s => s.Trim( new char []{ ' ', '\t'})).Where(s => s != String.Empty).ToArray();
 
