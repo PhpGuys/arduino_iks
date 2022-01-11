@@ -4,9 +4,15 @@
 #define cmdRead 0x01
 #define cmdWrite 0x02
 #define cmdButton 0x03
-#define CommandValid(cmd_) (cmd_ >= cmdRead && cmd_<= cmdButton) 
+
+#define CommandValid(cmd_) (cmd_ >= cmdRead && cmd_<= cmdButton)
 
 #define cmdError 0x04
+
+#define markerStart 0xF8
+#define markerStop 0xF9
+#define markerEsc 0xFA
+
 
 // Коды ошибок чтения данных
 enum ReadResult { ReadOK = 0x00, ReadError, CodeInvalid, OffsetInvalid, LenInvalid, CRCError};
@@ -17,7 +23,7 @@ int led = 13;
 Control control;
 byte* ptrControl = (byte *)&control;
 
-byte b[]= {0x02, 0x00, 0x04, 0x00, 0x02, 0x04,0x00, 0x00};
+byte b[] = {0x02, 0x00, 0x04, 0x00, 0x02, 0x04, 0x00, 0x00};
 
 void printHex(byte num) {
   char hexCar[2];
@@ -37,157 +43,208 @@ void setup() {
   control.letter = 'a';
   control.digit = 255;
   control.identifier = 9.999;
+
 }
 
 
 // Обработчик нажатия на кнопку
 void OnButton(int len, byte* buf)
 {
-  
-}
 
-void SendError(ReadResult err)
-{
-  byte crc=0;
-  byte code = cmdError;
-  byte data = err;
-  
-  WriteValue(&code,sizeof(code),&crc);
-  WriteValue(&data,sizeof(data),&crc);
-  Serial.write(crc);  
 }
 
 
-// Функция чтения элемента заданной длины из входного потока Serial с подсчетом контрольной суммы
-bool ReadValue(byte* value, int len, byte* crc)
+// Запись в порт с экранированием
+void WriteEscaped(byte b)
 {
-  if (Serial.readBytes(value, len) == len)
-  {
-    for (int i = 0; i < len; i++)
+    if (b == markerStart || b == markerStop || b == markerEsc)
     {
-      *crc ^= value[i];
+      Serial.write(markerEsc);
     }
-    return true;
-  }
-  return false;
+    Serial.write(b); 
 }
 
 
-// Функция записи элемента заданной длины в выходной поток Serial с подсчетом контрольной суммы
+
+// Функция записи элемента заданной длины в выходной поток Serial с подсчетом контрольной суммы и экранированием
 void WriteValue(byte* value, int len, byte* crc)
 {
   for (int i = 0; i < len; i++)
   {
-    Serial.write(value[i]);
+    WriteEscaped(value[i]);
     *crc ^= value[i];
   }
 }
 
+void SendError(ReadResult err)
+{
+  byte crc = 0;
+  byte code = cmdError;
+  byte data = err;
+
+  Serial.write((byte)markerStart);
+  WriteValue(&code, sizeof(code), &crc);
+  WriteValue(&data, sizeof(data), &crc);
+  WriteEscaped(crc);
+  Serial.write((byte)markerStop);
+}
+
 void SendData(int offset, int len)
 {
-  byte crc=0;
-  byte code = cmdRead;
-  
-  WriteValue(&code,sizeof(code),&crc);
-  WriteValue((byte*)&offset,sizeof(offset),&crc);
-  WriteValue((byte*)&len,sizeof(len),&crc);
-  WriteValue(&ptrControl[offset], len, &crc);
-  Serial.write(crc);
-}
- 
-ReadResult ReadPacket()
-{
-  byte code;
   byte crc = 0;
-  byte crcReaded;
-  int len;
-  int offset;
-  byte buf[64];
+  byte code = cmdRead;
+
+  Serial.write((byte)markerStart);
+  WriteValue(&code, sizeof(code), &crc);
+  WriteValue((byte*)&offset, sizeof(offset), &crc);
+  WriteValue((byte*)&len, sizeof(len), &crc);
+  WriteValue(&ptrControl[offset], len, &crc);
+  WriteEscaped(crc);
+  Serial.write((byte)markerStop);
+}
 
 
-  // Чтение команды
-  if (!ReadValue((byte*)&code,sizeof(code),&crc)) return ReadError;
+void ParseByte(byte b)
+{
+  static bool _escaped = false;
+  static byte RecievedBytes[64];
+  static byte pos = 0;
+  byte crc = 0;
 
-  // Валидация команды
-  if (!CommandValid(code)) return CodeInvalid;
-
-  // Расшифровка, валидация и выполнение команд
-  switch (code)
+  if(_escaped)
   {
-    // Команды чтения из структуры и запись в структуру
+    RecievedBytes[pos++] = b;
+    _escaped = false;
+  }
+  else
+  {
+    switch (b)
+    {
+      case markerStart:
+        if(pos > 0) 
+        {
+          pos = 0; SendError(ReadError); // Неожиданный старт пакета
+        }
+      break;
+      
+      case markerStop:
+        if(pos < 2)
+        {
+          pos = 0; SendError(ReadError); // Неожиданный конец пакета
+        }
+
+        // Проверка CRC
+        crc = 0;
+        for (int i = 0; i <pos; i++) crc ^= RecievedBytes[i];
+        if (crc !=0)
+        {
+          pos = 0; SendError(CRCError); // Ошибка контрольной суммы
+        }
+        else
+        {
+          ProcessPacket(RecievedBytes, pos);
+          pos = 0;
+        }
+      break;
+      
+      case markerEsc:
+        if(pos == 0)
+        {
+          SendError(ReadError); // Неожиданный Esc-символ
+        }
+        else
+        {
+          _escaped = true;
+        }
+      break;
+      
+      default: RecievedBytes[pos++] = b;
+    }
+  }
+  if (pos > 32)
+  {
+    pos = 0;
+    SendError(LenInvalid); // Слишком длинный пакет
+  }  
+}
+
+void ProcessPacket(byte* RecievedBytes, byte packetLen)
+{
+  unsigned int offset, len;
+  
+  byte code = RecievedBytes[0];
+
+  byte prefixLen = sizeof(code) + sizeof(offset) + sizeof(len);
+
+  switch(code)
+  {
     case cmdRead:
     case cmdWrite:
-      // Чтение смещения в структуре  
-      if (!ReadValue((byte*)&offset,sizeof(offset),&crc)) return ReadError;
+    {
+      if (packetLen < prefixLen)
+      {
+        // Слишком короткий пакет
+        SendError(ReadError); return; 
+      }
+      offset = (unsigned int)(RecievedBytes[1] + (RecievedBytes[2] << 8));
+      len = (unsigned int)(RecievedBytes[3] + (RecievedBytes[4] << 8));
 
-      // Чтeние длины извлекаемых/изменяемых данных
-      if (!ReadValue((byte*)&len,sizeof(len),&crc)) return ReadError;
-
-      // Валидация смещения (смещение + длина не должны выходить за пределы структуры)  
-      if (offset + len > sizeof(Control)) return OffsetInvalid;
+      // Валидация смещения (смещение + длина не должны выходить за пределы структуры)
+      if (offset + len > sizeof(Control))
+      {
+        SendError(OffsetInvalid); return; 
+      }
 
       // Только при записи
       if (code == cmdWrite)
       {
         // Валидация длины изменяемых данных (допустимые значения длин данных - 1,2,4 байта)
-        if (len != 1 && len != 2 && len != 4) return LenInvalid;
+        if (len != 1 && len != 2 && len != 4) 
+        {
+          SendError(LenInvalid); return;
+        }
 
-        // Чтение изменяемых данных в буфер
-        if (!ReadValue(buf,len,&crc)) return ReadError;
+        // К этому моменту мы точно знаем должную длину пакета
+        if (packetLen != sizeof(code) + sizeof(offset) + sizeof(len) + len + 1)
+        {
+           SendError(LenInvalid); return;         
+        }
+        memcpy(&ptrControl[offset], RecievedBytes+prefixLen, len);
       }
-
-      // Чтeние crc
-      if (!ReadValue((byte*)&crcReaded,sizeof(crcReaded),&crc)) return ReadError;
-      
-      // Валидация crc 
-      if (crc != 0) return CRCError;
-
-      // Только при записи
-      if (code == cmdWrite)
-      {
-        memcpy(&ptrControl[offset], buf, len); 
-      }      
-
       // Возврат прочитанных/измененных данных
       SendData(offset, len);
-      break;
-    // Нажатие кнопки    
-    case cmdButton:
-      
-      // Чтeние длины команды
-      if (!ReadValue((byte*)&len,sizeof(len),&crc)) return ReadError;
-      
-      // Валидация длины (не более 64 байт) 
-      if (len > 64) return LenInvalid;
-      
-      // Чтение команды в буфер
-      if (!ReadValue(buf,len,&crc)) return ReadError;
+    }
+    break;
 
-      // Чтeние crc
-      if (!ReadValue(&crcReaded,sizeof(crc),&crc)) return ReadError;
-      
-      // Валидация crc 
-      if (crc != 0) return CRCError;
+    // Нажатие кнопки
+    case cmdButton:
+    {
+      if (packetLen < sizeof(code) + sizeof(len))
+      {
+        // Слишком короткий пакет
+        SendError(ReadError); return; 
+      }
+      // Чтeние длины команды
+      len = (unsigned int)(RecievedBytes[3] + (RecievedBytes[4] << 8));     
+
+      // Валидация длины (не более 32 байт)
+      if (len > 32)
+      {
+        SendError(LenInvalid); return; 
+      }
 
       // Выполнение команды по кнопке
-      OnButton(len, buf);      
-      
-      break;
+      OnButton(len, RecievedBytes);
+    }
+    break;
+    default:SendError(CodeInvalid); return; 
+    
   }
-  return ReadOK;
 }
 
-
 void loop() {
-
-  ReadResult res;
-  if(Serial.available())
+  while (Serial.available())
   {
-    res = ReadPacket();
-    if (res != ReadOK)
-    {
-      SendError(res);
-    }
+    ParseByte(Serial.read());
   }
-  digitalWrite(led, HIGH);
 }
