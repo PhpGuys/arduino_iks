@@ -11,7 +11,7 @@ namespace Arduino
         ArduinoDevice device;
         Parser parser;
 
-        SerialPort port = new SerialPort("COM7", 9600);
+        SerialPort port = new SerialPort("COM3", 9600);
 
         
         private void Setup()

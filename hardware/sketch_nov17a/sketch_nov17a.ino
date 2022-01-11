@@ -23,7 +23,7 @@ int led = 13;
 Control control;
 byte* ptrControl = (byte *)&control;
 
-byte b[] = {0x02, 0x00, 0x04, 0x00, 0x02, 0x04, 0x00, 0x00};
+int cTimeOut = -1;
 
 void printHex(byte num) {
   char hexCar[2];
@@ -124,6 +124,9 @@ void ParseByte(byte b)
         if(pos > 0) 
         {
           pos = 0; SendError(ReadError); // Неожиданный старт пакета
+        } else 
+        {
+          cTimeOut = 0; // Начало отчёта. Ожидаем байты в порту до таймоута
         }
       break;
       
@@ -144,6 +147,7 @@ void ParseByte(byte b)
         {
           ProcessPacket(RecievedBytes, pos);
           pos = 0;
+          cTimeOut = -1; // Не ожидаем таймаута для байтов из порта
         }
       break;
       
@@ -243,8 +247,16 @@ void ProcessPacket(byte* RecievedBytes, byte packetLen)
 }
 
 void loop() {
-  while (Serial.available())
+  if (Serial.available())
   {
     ParseByte(Serial.read());
+  } else if (cTimeOut != -1)
+  {
+    if (++cTimeOut > 20)
+    {
+      SendError(ReadError);
+      cTimeOut = -1;
+    }
+    delay(1);
   }
 }
