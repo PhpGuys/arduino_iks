@@ -87,6 +87,7 @@ void SendError(ReadResult err)
   WriteValue(&data, sizeof(data), &crc);
   WriteEscaped(crc);
   Serial.write((byte)markerStop);
+  cTimeOut = -1;
 }
 
 void SendData(int offset, int len)
@@ -137,7 +138,7 @@ void ParseByte(byte b)
         }
 
         // Проверка CRC
-        crc = 0;
+        crc = 0; // "s_of_len_data1_esc_s_data2_crc_e";
         for (int i = 0; i <pos; i++) crc ^= RecievedBytes[i];
         if (crc !=0)
         {
