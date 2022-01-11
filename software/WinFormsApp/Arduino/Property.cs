@@ -123,7 +123,7 @@ namespace Arduino
             switch (Type.GetTypeCode(typeof(T)))
             {
                 case TypeCode.Byte: { return (T)Convert.ChangeType(data[0], typeof(T)); }
-                case TypeCode.SByte: { return (T)Convert.ChangeType(data[0], typeof(T)); }
+                case TypeCode.SByte: { return (T)Convert.ChangeType(((sbyte[])(Array)data)[0], typeof(T)); }
                 case TypeCode.Int16: { return (T)Convert.ChangeType(BitConverter.ToUInt16(data), typeof(T)); }
                 case TypeCode.UInt16: { return (T)Convert.ChangeType(BitConverter.ToUInt16(data), typeof(T)); }
                 case TypeCode.Single: { return (T)Convert.ChangeType(BitConverter.ToSingle(data), typeof(T)); }
