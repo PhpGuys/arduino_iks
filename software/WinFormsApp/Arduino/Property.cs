@@ -90,7 +90,7 @@ namespace Arduino
             }
             catch (Exception)
             {
-                MessageBox.Show("Некорректное значение");
+                MessageBox.Show("Некорректное значение поля ('" + Name +"')");
                 newValue = _value;
             }
             if (newValue.Equals(_value)) return false;

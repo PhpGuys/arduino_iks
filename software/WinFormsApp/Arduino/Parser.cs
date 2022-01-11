@@ -35,11 +35,11 @@ namespace Arduino
 
         Dictionary<string, hardParam> dataTypes = new() 
         {
-            { "unsigned char", new() {name ="", type = typeof(byte),  controlType = "F", min = "0", max = "255", def = "0", timer = 1 } },
-            { "signed char", new() { name = "", type = typeof(sbyte),  controlType = "F", min = "-128", max = "127", def = "0", timer = 1 } },
-            { "unsigned int", new () { name = "", type = typeof(ushort),  controlType = "F", min = "0", max = "65535", def = "0", timer = 1 } },
-            { "signed int", new () { name = "", type = typeof(short), controlType = "F", min = "-32768", max = "32767", def = "0", timer = 1 } },
-            { "float", new() { name = "", type = typeof(float),  controlType = "F", min = "-3.402823e38", max = "3.402823e38", def = "0", timer = 1 } },
+            { "unsigned char", new() {name ="", type = typeof(byte),  controlType = "F", min = "0", max = "255", def = "0", timer = 1000 } },
+            { "signed char", new() { name = "", type = typeof(sbyte),  controlType = "F", min = "-128", max = "127", def = "0", timer = 1000 } },
+            { "unsigned int", new () { name = "", type = typeof(ushort),  controlType = "F", min = "0", max = "65535", def = "0", timer = 1000 } },
+            { "signed int", new () { name = "", type = typeof(short), controlType = "F", min = "-32768", max = "32767", def = "0", timer = 1000 } },
+            { "float", new() { name = "", type = typeof(float),  controlType = "F", min = "-3.402823e38", max = "3.402823e38", def = "0", timer = 1000 } },
         };
 
         Dictionary<string, Type> propTypes = new()

@@ -10,10 +10,16 @@ namespace Arduino
 
         ArduinoDevice device;
         Parser parser;
+
+        SerialPort port = new SerialPort("COM7", 9600);
+
+        
         private void Setup()
         {
-            device = new(new SerialPort("COM3", 9600), this);
+
+            device = new(port, this);
             parser = new Parser(device);
+
 
             parser.Parse(@"file.h");
 
@@ -32,25 +38,23 @@ namespace Arduino
         {
             InitializeComponent();
             Setup();
-            device.Connect();
-            timer1.Start();
-            device.RequestAllValues();
+
         }
 
         private void timer1_Tick(object sender, EventArgs e)
         {
-            device.Update();
+        //    device.Update();
         }
 
         public void Log(string message)
         {
             if (richTextBox1.InvokeRequired)
             {
-                richTextBox1.Invoke(new Action(() => richTextBox1.AppendText( message)));
+                richTextBox1.Invoke(new Action(() => richTextBox1.AppendText(Environment.NewLine + message)));
             }
             else
             {
-                richTextBox1.AppendText( message);
+                richTextBox1.AppendText(Environment.NewLine + message);
                 richTextBox1.ScrollToCaret();
             }
         }
@@ -58,6 +62,17 @@ namespace Arduino
         private void Form1_FormClosing(object sender, FormClosingEventArgs e)
         {
             device.Kill();
+        }
+
+        private void Form1_Load(object sender, EventArgs e)
+        {
+            port.DataReceived += (sender, args) =>
+            {
+                this?.Invoke(new Action(() => { device.OnData(sender, args); }));
+            };
+            device.Connect();
+            timer1.Start();
+            device.RequestAllValues();
         }
     }
 }

@@ -2,18 +2,36 @@
 
 namespace Arduino
 {
+
+    public enum ArduinoError: byte { OK = 0x00, ReadError, CodeInvalid, OffsetInvalid, LenInvalid, CRCError }
+
     public class ArduinoDevice : IHardware
     {
+        const byte markerStart = 0xF8;
+        const byte markerStop = 0xF9;
+        const byte markerEsc = 0xFA;
+
+        const byte cmdRead = 0x01;
+        const byte cmdWrite = 0x02;
+        const byte cmdCommand = 0x03;
+        const byte cmdError = 0x04;
+
+
+
         SerialPort Port;
-        Thread readThread;
 
         ILogger logger;
 
         public int PropsLen => properties.Sum(x => x.Value.RawValue.Length);
 
-        private Queue<HardwareMessage> RecievedMessages = new();
+        //private Queue<HardwareMessage> RecievedMessages = new();
+
+        private Queue<byte> RecievedBytes = new();
 
         Dictionary<int, IProperty> properties = new();    
+
+        private bool _escaped = false;
+
         public void RegisterProperty(IProperty prop)
         {
             properties[prop.Offset] = prop;
@@ -27,211 +45,264 @@ namespace Arduino
         {
             logger = log;
             Port = port;
+           // Port.DataReceived += new SerialDataReceivedEventHandler(OnData);
         }
 
 
         public void Kill()
         {
-            Port.Close();
+           if (Port.IsOpen) Port.Close();
+        }
+
+        void ProcessByte(byte b)
+        {
+            if (_escaped)
+            {
+                RecievedBytes.Enqueue(b);
+                _escaped = false;
+                return;
+            }
+            switch (b)
+            {
+                case markerStart:
+                    {
+                        if (RecievedBytes.Count > 0)
+                        {
+                            logger.Log("Неожиданный старт пакета");
+                            RecievedBytes.Clear();
+                        }
+                    }
+                    break;
+                case markerStop:
+                    {
+                        if (RecievedBytes.Count < 2) // Минимально возможный в теории пакет - код команды + CRC
+                        {
+                            logger.Log("Неожиданный конец пакета");
+                        }
+                        else 
+                        {
+                            if (RecievedBytes.Aggregate((x, y) => (byte)(x ^ y))!=0)
+                            {
+                                logger.Log("Ошибка контрольной суммы");
+                                RecievedBytes.Clear();
+                            }
+                            else 
+                            {
+                                if (!ProcessPacket())
+                                {
+                                    RecievedBytes.Clear();
+                                }
+                            }
+                        }
+                    }
+                    break;
+                case markerEsc:
+                    {
+                        if (RecievedBytes.Count == 0)
+                        {
+                            logger.Log("Неожиданный Esc символ");
+                        }
+                        else
+                        {
+                            _escaped = true;
+                        }
+                    }
+                    break;
+                default:
+                    {
+                        RecievedBytes.Enqueue(b);
+                    }
+                    break;
+            }
+        }
+        bool ProcessPacket()
+        {
+            ushort offset, len;
+            byte code = RecievedBytes.Dequeue();
+
+            switch (code)
+            {
+                case cmdRead:
+                    {
+                        if (RecievedBytes.Count < 5)
+                        {
+                            logger.Log("Слишком короткий пакет"); return false;
+                        }
+                        offset = RecievedBytes.Dequeue();
+                        offset += (ushort)(RecievedBytes.Dequeue() << 8);
+                        len = RecievedBytes.Dequeue();
+                        len += (ushort)(RecievedBytes.Dequeue() << 8);
+
+                        if (offset + len > PropsLen)
+                        {
+                            logger.Log("Слишком длинный пакет данных"); return false;
+                        }
+
+                        if (RecievedBytes.Count != len + 1)
+                        {
+                            logger.Log("Неверная длина данных"); return false;
+                        }
+                        byte[] data = new byte[len];
+                        for (int i = 0; i < len; i++)
+                        {
+                            data[i] = RecievedBytes.Dequeue(); 
+                        }
+                        //logger.Log("<<<<< Пакет Arduino {" + BitConverter.ToString(data) + "}");
+                        ProcessMessage(offset, data);
+                    }
+                    break;
+                case cmdError:
+                    {
+                        if (RecievedBytes.Count < 2)
+                        {
+                            logger.Log("Слишком короткий пакет"); return false;
+                        }
+                        byte data = RecievedBytes.Dequeue();
+
+
+                        if (Enum.TryParse(data.ToString(),true, out ArduinoError res))
+                        {
+                            logger.Log("<<<<< Ошибка: " + res.ToString());
+                        }
+                        else
+                        {
+                            logger.Log("<<<<< неизвестная ошибка");
+                        }
+
+                        // TODO
+                    }
+                    break;
+                default:
+                    {
+                        logger.Log("Неверный код команды"); return false;
+                    }
+            }
+            RecievedBytes.Clear(); // Удаление CRC
+            return true;
+        }
+
+        public void OnData(object sender, SerialDataReceivedEventArgs e)
+        {
+            int count = Port.BytesToRead;
+            try
+            {
+                while (Port.BytesToRead > 0)
+                {
+                    int res = Port.ReadByte();
+                    if (res >= 0)
+                    {
+                        ProcessByte((byte)res);
+                    }
+                    else
+                    {
+                        logger.Log("Неожиданный конец потока");
+                    }
+                }
+            }
+            catch (InvalidOperationException)
+            {
+                MessageBox.Show("Порт закрыт");
+            }
+            catch(TimeoutException)
+            {
+                MessageBox.Show("Таймаут чтения данных");
+            }
         }
 
 
-        void ProcessMessage(HardwareMessage msg)
+        void ProcessMessage(ushort offset, byte[] data)
         {
             int position = 0;
 
             try
             {
-                while (position < msg.Value.Length)
+                while (position < data.Length)
                 {
-                    int step = properties[msg.Offset + position].RawValue.Length;
-                    properties[msg.Offset + position].RawValue = msg.Value.Skip(position).Take(step).ToArray();
+                    int step = properties[offset + position].RawValue.Length;
+                    properties[offset + position].RawValue = data.Skip(position).Take(step).ToArray();
                     position += step;
                 }
             }
             catch (Exception)
             {
-                logger.Log(Environment.NewLine + "[Ошибка расшифровки данных]  {смещение: " + (msg.Offset+position).ToString() + "}");
+                logger.Log("[Ошибка расшифровки данных]  {смещение: " + (offset+position).ToString() + "}");
             }
 
         }
-        public void Update()
-        {
-            if (RecievedMessages.Count <= 0) return;
 
-            lock (RecievedMessages)
-            {
-                while (RecievedMessages.Count > 0)
-                {
-                    HardwareMessage msg = RecievedMessages.Dequeue();
-                    ProcessMessage(msg);
-                    //properties[msg.Offset].RawValue = msg.Value;
-                }
-            }
-        }
 
         public void Connect()
         {
             Port.Open();
-            readThread = new Thread(Read);
-            readThread.Start();
         }
 
-        // void OnPropertyChanged(e)
 
-        public void RequestAllValues()
+
+        public void SendCommand(byte cmd, ushort offset, ushort len, byte[] data)
         {
-            int len = PropsLen;
+
+            // Формирование пакета
             List<byte> msg = new();
-            msg.Add(0x01);
-            // Смещение
-            msg.Add(0x00);
-            msg.Add(0x00);
-            // Длина
+            msg.Add(cmd);
+
+            // Только для чтения или записи
+            if (cmd == cmdRead || cmd == cmdWrite)
+            {
+                msg.Add((byte)(offset & 0xFF));
+                msg.Add((byte)(offset >> 8));
+            }
+
             msg.Add((byte)(len & 0xFF));
             msg.Add((byte)(len >> 8));
 
-            msg.Add(GetCRC(msg));
-            Port.Write(msg.ToArray(), 0, msg.Count);
-            logger.Log(">>>> Запрос всех полей {" + BitConverter.ToString(msg.ToArray()) + "}");
+            // Только для записи
+            if (cmd == cmdWrite)
+            {
+                msg.AddRange(data);
+            }
+
+            // Добавление CRC
+            msg.Add(msg.Aggregate((x, y) => (byte)(x ^ y)));
+
+
+            // Отправка с экранированием
+            Port.Write(new byte[] {markerStart},0,1);
+
+            foreach (byte b in msg)
+            {
+                if (b == markerStart || b == markerStop || b == markerEsc)
+                {
+                    Port.Write(new byte[] { markerEsc }, 0, 1);
+                }
+                Port.Write(new byte[] { b }, 0, 1);
+            }
+            Port.Write(new byte[] { markerStop }, 0, 1);
+            logger.Log(">>>> Команда {" + BitConverter.ToString(msg.ToArray()) + "}");
+        }
+
+        public void RequestAllValues()
+        {
+            SendCommand(cmdRead, 0, (ushort)PropsLen, Array.Empty<byte>());
         }
 
 
 
         public void RequestValue(IProperty p)
         {
-            int len = p.RawValue.Length;
-            List<byte> msg = new();
-            msg.Add(0x01);
-            // Смещение
-            msg.Add((byte)(p.Offset & 0xFF));
-            msg.Add((byte)(p.Offset >> 8));
-            // Длина
-            msg.Add((byte)(len & 0xFF));
-            msg.Add((byte)(len >> 8));
-
-            msg.Add(GetCRC(msg));
-            Port.Write(msg.ToArray(), 0, msg.Count);
-            logger.Log(Environment.NewLine + ">>>> Запрос на обновление {" + BitConverter.ToString(msg.ToArray()) + "}");
+            SendCommand(cmdRead, p.Offset, (ushort)p.RawValue.Length, Array.Empty<byte>());
         }
 
         public void SendValue(IProperty p)
         {
-            byte[] data = p.RawValue;
-
-            ushort len = (ushort)data.Length;
-            List<byte> msg = new();
-            msg.Add(0x02);
-            msg.Add((byte)(p.Offset & 0xFF));
-            msg.Add((byte)(p.Offset >> 8));
-
-            msg.Add((byte)(len & 0xFF));
-            msg.Add((byte)(len >> 8));
-
-            msg.AddRange(data);
-            msg.Add(GetCRC(msg));
-            Port.Write(msg.ToArray(), 0, msg.Count);
-            logger.Log(Environment.NewLine + ">>>> Изменение поля {" + BitConverter.ToString(msg.ToArray()) + "}");
-        }
-
-        byte GetCRC(List<byte>msg)
-        {
-            byte crc = 0x00;
-            foreach (byte b in msg)
-            {
-                crc ^= b;
-            }
-            return crc;
-        }
-
-
-
-        public ushort ReadUshort(ref byte crc)
-        {
-            byte b = (byte)Port.ReadByte();
-            logger.Log(".."+b.ToString());
-            crc ^= b;
-            ushort result = (ushort)b;
-            b = (byte)Port.ReadByte();
-            logger.Log(".." + b.ToString());
-            crc ^= b;
-            result += (ushort)(b<<8);
-            return result;
-        }
-
-        /// <summary>
-        ///  Метод чтения из порта (Запускается в отдельном потоке)
-        /// </summary>
-        private void Read()
-        {
-            ushort offset, len;
-            byte crc; 
-            int code;
-            byte errCode;
-            while (true)
-            {
-                try
-                {
-                    code = Port.ReadByte();
-                    if (code >= 0)
-                    {
-                        crc = (byte)code;
-                        if (code == 0x01) // Возврат данных
-                        {
-                            offset = ReadUshort(ref crc);
-                            len = ReadUshort(ref crc);
-                            byte[] data = new byte[len];
-                            Port.Read(data, 0, len);
-                            foreach (byte b in data)
-                            {
-                                logger.Log("-" + b.ToString());
-                                crc ^= b;
-                            }
-                            logger.Log(Environment.NewLine + "<<<< Получено значение данных {" + BitConverter.ToString(data) + "}");
-                            if (crc == Port.ReadByte())
-                            {
-                                lock (RecievedMessages)
-                                {
-                                    RecievedMessages.Enqueue(new HardwareMessage() { Offset = offset, Value = data });
-                                }
-                            }
-                        }
-                        if (code == 0x04)
-                        {
-                            errCode = (byte)Port.ReadByte();
-                            crc ^= errCode;
-                            if (crc == Port.ReadByte())
-                            {
-                                logger.Log(Environment.NewLine + "<<<< Ошибка {" + errCode.ToString() + "}");
-                            }
-                        }
-                    }
-                }
-                catch (Exception e)
-                {
-                   // MessageBox.Show(e.Message);
-                    break;
-                }
-            }
+            SendCommand(cmdWrite, p.Offset, (ushort)p.RawValue.Length, p.RawValue);
         }
 
         public void SendCommand(string cmd)
         {
-
             String[] arr = cmd.Split('-');
             byte[] data = new byte[arr.Length];
             for (int i = 0; i < arr.Length; i++) data[i] = Convert.ToByte(arr[i], 16);
-
-
-            ushort len = (ushort)data.Length;
-            List<byte> msg = new();
-            msg.Add(0x03);
-            msg.Add((byte)(len & 0xFF));
-            msg.Add((byte)(len >> 8));
-            msg.AddRange(data);
-            msg.Add(GetCRC(msg));
-            Port.Write(msg.ToArray(), 0, msg.Count);
-            logger.Log(Environment.NewLine + ">>>> Команда от кнопки {" + BitConverter.ToString(msg.ToArray()) + "}");
+            SendCommand(cmdCommand, 0, (ushort)data.Length, data);
         }
     }
 }
